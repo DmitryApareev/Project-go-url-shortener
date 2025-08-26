@@ -21,17 +21,18 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up Go 1.20
+      # Устанавливаем Go 1.20
+      - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20
+          go-version: "1.20"
 
       - name: Verify Go version
         run: go version
 
+      # Кэширование модулей Go
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -42,15 +43,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      # Устанавливаем зависимости
       - name: Install dependencies
         run: go mod tidy
 
+      # Устанавливаем swag и генерируем Swagger
       - name: Generate Swagger docs
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
           swag init -g ./cmd/shortener/main.go --output ./docs
 
+      # Запускаем тесты
       - name: Run tests
         env:
-          PORT: 6379 # Redis порт для тестов
+          REDIS_ADDR: localhost:6379
         run: go test ./... -v
